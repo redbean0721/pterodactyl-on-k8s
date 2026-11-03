@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: panel-config
+  namespace: pterodactyl
+data:
+  APP_URL: "https://panel.example.com"
+  APP_ENV: "production"
+  APP_TIMEZONE: "UTC"
+  APP_SERVICE_AUTHOR: "no-reply@example.com"
+  # false：後台 Settings 頁面的寄信、reCAPTCHA 設定會存進資料庫，並覆蓋這裡的值
+  APP_ENVIRONMENT_ONLY: "false"
+  # 只用 HTTP 時改成 "false"，否則會無法登入
+  SESSION_SECURE_COOKIE: "true"
+  # 叢集的 Pod CIDR，預設為 k3s 的 IPv4 / IPv6 預設值，用逗號分隔
+  TRUSTED_PROXIES: "10.42.0.0/16,2001:cafe:42::/56"
+
+  # 要跟 mariadb.yaml 的 MARIADB_DATABASE、MARIADB_USER 一致
+  DB_HOST: "mariadb"
+  DB_PORT: "3306"
+  DB_DATABASE: "panel"
+  DB_USERNAME: "pterodactyl"
+
+  # Valkey 與 Redis 協定相容，所以變數名稱是 REDIS_*
+  CACHE_DRIVER: "redis"
+  SESSION_DRIVER: "redis"
+  QUEUE_CONNECTION: "redis"
+  REDIS_HOST: "valkey"
+  REDIS_PORT: "6379"
+
+  # SMTP 帳密放在 panel-secret
+  MAIL_MAILER: "smtp"
+  MAIL_HOST: "smtp.example.com"
+  MAIL_PORT: "587"
+  MAIL_ENCRYPTION: "tls"
+  MAIL_FROM_ADDRESS: "no-reply@example.com"
+  MAIL_FROM_NAME: "Pterodactyl Panel"
+  # 建議取消註解並改成 Panel 的網域，否則Gmail 等郵件伺服器可能會拒收
+  # MAIL_EHLO_DOMAIN: "panel.example.com"

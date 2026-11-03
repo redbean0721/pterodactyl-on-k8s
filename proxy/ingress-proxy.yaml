@@ -1,0 +1,54 @@
+# 適用「前面有反向代理處理 HTTPS，Traefik 只收 HTTP」的架構
+# Traefik v3 寫法；v2 要把 ipAllowList 改成 ipWhiteList，
+# v2.10 以前的版本還要把 apiVersion 改成 traefik.containo.us/v1alpha1
+
+# 反向代理已經處理了 HTTPS，告訴 Panel 原本的協定是 https，
+# 否則 Panel 會產生 http:// 的連結，造成混合內容錯誤
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: forwarded-https
+  namespace: pterodactyl
+spec:
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"
+---
+# （選用）只允許反向代理連進來，避免有人繞過它直接連 Traefik
+# 前提：Traefik 要看得到反向代理的真實 IP（Traefik Service 的
+# externalTrafficPolicy 為 Local），否則連反向代理也會被擋
+# 啟用方式：把下面的 router.middlewares 改成兩個都套用
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: from-proxy-only
+  namespace: pterodactyl
+spec:
+  ipAllowList:
+    sourceRange:
+      - 192.0.2.10/32                # 改成反向代理的 IP，可以加多個，也支援 IPv6
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: panel
+  namespace: pterodactyl
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    # 格式：<namespace>-<Middleware 名稱>@kubernetescrd，換 namespace 時要一起改
+    traefik.ingress.kubernetes.io/router.middlewares: pterodactyl-forwarded-https@kubernetescrd
+    # 啟用 IP 白名單時改成：
+    # traefik.ingress.kubernetes.io/router.middlewares: pterodactyl-from-proxy-only@kubernetescrd,pterodactyl-forwarded-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: panel.example.com        # 使用者看到的網域，要跟 APP_URL 一致
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: panel
+                port:
+                  name: http

@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: panel-data
+  namespace: pterodactyl
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: panel
+  namespace: pterodactyl
+spec:
+  selector:
+    app: panel
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: panel
+  namespace: pterodactyl
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: panel
+  template:
+    metadata:
+      labels:
+        app: panel
+    spec:
+      enableServiceLinks: false
+      initContainers:
+        - name: wait-for-deps
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - until nc -z -w2 valkey 6379; do echo "waiting for valkey"; sleep 2; done
+      containers:
+        - name: panel
+          image: ghcr.io/pterodactyl/panel:v1.15.2
+          envFrom:
+            - configMapRef:
+                name: panel-config
+          env:
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef: { name: panel-secret, key: APP_KEY }
+            - name: HASHIDS_SALT
+              valueFrom:
+                secretKeyRef: { name: panel-secret, key: HASHIDS_SALT }
+            - name: HASHIDS_LENGTH
+              valueFrom:
+                secretKeyRef: { name: panel-secret, key: HASHIDS_LENGTH }
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef: { name: panel-secret, key: MAIL_USERNAME }
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: panel-secret, key: MAIL_PASSWORD }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: mariadb-secret, key: password }
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: valkey-secret, key: password }
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: data
+              mountPath: /app/var
+              subPath: var
+            - name: data
+              mountPath: /app/storage/logs
+              subPath: logs
+          startupProbe:
+            httpGet: { path: /auth/login, port: http }
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /auth/login, port: http }
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 1Gi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: panel-data

@@ -1,0 +1,63 @@
+# Argo CD Application 範本：直接使用公開 repo，在這裡覆蓋設定
+# 1. 先照 README 建立 namespace 和 Secret（Argo CD 不會建立 Secret）
+# 2. 修改下面標示的值
+# 3. kubectl apply -f application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pterodactyl
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/redbean0721/pterodactyl-on-k8s.git
+    targetRevision: v1.0.0           # 建議固定版本 tag，不要用 main
+    path: https                      # 在反向代理後面時改成 proxy
+    kustomize:
+      patches:
+        # Panel 設定
+        - patch: |-
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: panel-config
+              namespace: pterodactyl
+            data:
+              APP_URL: "https://panel.example.com"
+              APP_SERVICE_AUTHOR: "admin@example.com"
+              MAIL_HOST: "smtp.example.com"
+              MAIL_FROM_ADDRESS: "no-reply@example.com"
+              MAIL_EHLO_DOMAIN: "panel.example.com"   # 建議一起加
+              # TRUSTED_PROXIES: "10.244.0.0/16"     # 非 k3s 叢集要改
+
+        # Ingress 網域（path: https）
+        - target: { kind: Ingress, name: panel }
+          patch: |-
+            - op: replace
+              path: /spec/rules/0/host
+              value: panel.example.com
+            - op: replace
+              path: /spec/tls/0/hosts/0
+              value: panel.example.com
+            - op: replace
+              path: /metadata/annotations/cert-manager.io~1cluster-issuer
+              value: letsencrypt-prod
+        - target: { kind: Ingress, name: panel-http-redirect }
+          patch: |-
+            - op: replace
+              path: /spec/rules/0/host
+              value: panel.example.com
+
+        # Ingress 網域（path: proxy 時改用這段，並刪掉上面兩段）
+        # - target: { kind: Ingress, name: panel }
+        #   patch: |-
+        #     - op: replace
+        #       path: /spec/rules/0/host
+        #       value: panel.example.com
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pterodactyl
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
