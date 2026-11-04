@@ -111,7 +111,7 @@ kubectl -n pterodactyl create secret generic panel-secret \
 ```bash
 git clone https://github.com/redbean0721/pterodactyl-on-k8s.git
 cd pterodactyl-on-k8s
-git checkout v1.0.0
+git checkout v1.0.1
 ```
 
 | 檔案 | 要修改的欄位 |
@@ -156,14 +156,14 @@ kubectl apply -k https/      # 或 proxy/
 ### 1. 下載範本
 
 ```bash
-curl -LO https://raw.githubusercontent.com/redbean0721/pterodactyl-on-k8s/v1.0.0/argocd/application.yaml
+curl -LO https://raw.githubusercontent.com/redbean0721/pterodactyl-on-k8s/v1.0.1/argocd/application.yaml
 ```
 
 ### 2. 修改 Application
 
 | 欄位 | 說明 |
 | --- | --- |
-| `targetRevision` | 版本 tag，例如 `v1.0.0`。**不要用 `main`**，否則這個 repo 的每次修改都會直接部署到你的叢集 |
+| `targetRevision` | 版本 tag，例如 `v1.0.1`。**不要用 `main`**，否則這個 repo 的每次修改都會直接部署到你的叢集 |
 | `path` | `https` 或 `proxy` |
 | ConfigMap 的 patch | 只列出要改的欄位，其他欄位保留預設值 |
 | Ingress 的 patch | 網域和 ClusterIssuer |

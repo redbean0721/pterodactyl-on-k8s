@@ -2,8 +2,8 @@
 # Traefik v3 寫法；v2 要把 ipAllowList 改成 ipWhiteList，
 # v2.10 以前的版本還要把 apiVersion 改成 traefik.containo.us/v1alpha1
 
-# 反向代理已經處理了 HTTPS，告訴 Panel 原本的協定是 https，
-# 否則 Panel 會產生 http:// 的連結，造成混合內容錯誤
+# 反向代理已經處理了 HTTPS，告訴 Panel 原本的協定和 port，
+# 否則 Panel 會產生 http:// 或 https://...:80 的連結，造成混合內容錯誤
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -13,6 +13,7 @@ spec:
   headers:
     customRequestHeaders:
       X-Forwarded-Proto: "https"
+      X-Forwarded-Port: "443"
 ---
 # （選用）只允許反向代理連進來，避免有人繞過它直接連 Traefik
 # 前提：Traefik 要看得到反向代理的真實 IP（Traefik Service 的

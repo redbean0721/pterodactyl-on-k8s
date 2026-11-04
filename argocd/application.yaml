@@ -11,7 +11,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/redbean0721/pterodactyl-on-k8s.git
-    targetRevision: v1.0.0           # 建議固定版本 tag，不要用 main
+    targetRevision: v1.0.1           # 建議固定版本 tag，不要用 main
     path: https                      # 在反向代理後面時改成 proxy
     kustomize:
       patches:
